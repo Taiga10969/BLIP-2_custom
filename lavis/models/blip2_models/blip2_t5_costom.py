@@ -56,7 +56,10 @@ class Blip2T5_CUSTOM(Blip2Base):
         """
         super().__init__()
 
+        vit_model="eva_clip_g_attn" ## attnモデルを取り出したい時のみコメントアウトを外す
+
         print('My log : model_generated!! class Blip2T5(Blip2Base) >>[CUSTOM_MODEL]<<')
+        print('Mu log : vit_model > ', vit_model)
 
         self.tokenizer = self.init_tokenizer()
 
@@ -64,8 +67,8 @@ class Blip2T5_CUSTOM(Blip2Base):
             vit_model, img_size, drop_path_rate, use_grad_checkpoint, vit_precision
         )
 
-        print('self.visual_encoder : ', self.visual_encoder)
-        print('self.visual_encoder.num_features : ', self.visual_encoder.num_features)
+        #print('self.visual_encoder : ', self.visual_encoder)
+        #print('self.visual_encoder.num_features : ', self.visual_encoder.num_features)
 
 
         if freeze_vit:
@@ -110,12 +113,21 @@ class Blip2T5_CUSTOM(Blip2Base):
         image = samples["image"]
 
         with self.maybe_autocast():
-            image_embeds = self.ln_vision(self.visual_encoder(image))
+            image, attn = self.visual_encoder(image)
+            image_embeds = self.ln_vision(image)
         image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(
             image.device
         )
 
-        return image_embeds, image_atts
+        return image_embeds, image_atts, attn
+    
+
+    def get_last_selfattention(self, samples):  # My_Function
+        image = samples["image"]
+
+        with self.maybe_autocast():
+            _, attn = self.visual_encoder(image)
+        return attn
 
 
 
@@ -123,7 +135,8 @@ class Blip2T5_CUSTOM(Blip2Base):
         image = samples["image"]
 
         with self.maybe_autocast():
-            image_embeds = self.ln_vision(self.visual_encoder(image))
+            image, attn = self.visual_encoder(image)
+            image_embeds = self.ln_vision(image)
         image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(
             image.device
         )
@@ -182,12 +195,13 @@ class Blip2T5_CUSTOM(Blip2Base):
         print('inout image.shape : ', image.shape)
 
         with self.maybe_autocast():
-            image_embeds = self.ln_vision(self.visual_encoder(image))
+            image, attn = self.visual_encoder(image)
+            image_embeds = self.ln_vision(image)
         image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(
             image.device
         )
 
-        print('image_embeds.shape : ', image_embeds.shape)
+        #print('image_embeds.shape : ', image_embeds.shape)
 
         query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
         query_output = self.Qformer.bert(
@@ -196,6 +210,7 @@ class Blip2T5_CUSTOM(Blip2Base):
             encoder_attention_mask=image_atts,
             return_dict=True,
         )
+        #print('Qformer > query_output.last_hidden_state.shape : ', query_output.last_hidden_state.shape)
 
         inputs_t5 = self.t5_proj(query_output.last_hidden_state)
         atts_t5 = torch.ones(inputs_t5.size()[:-1], dtype=torch.long).to(image.device)
@@ -290,7 +305,8 @@ class Blip2T5_CUSTOM(Blip2Base):
         image = samples["image"]
 
         with self.maybe_autocast():
-            image_embeds = self.ln_vision(self.visual_encoder(image))
+            image, attn = self.visual_encoder(image)
+            image_embeds = self.ln_vision(image)
         image_embeds = image_embeds.float()
         image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(
             image.device
@@ -363,7 +379,8 @@ class Blip2T5_CUSTOM(Blip2Base):
     ):
         image = samples["image"]
         with self.maybe_autocast():
-            image_embeds = self.ln_vision(self.visual_encoder(image))
+            image, attn = self.visual_encoder(image)
+            image_embeds = self.ln_vision(attn)
         image_embeds = image_embeds.float()
         image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(
             image.device
