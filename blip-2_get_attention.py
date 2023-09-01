@@ -91,7 +91,7 @@ print('output[text][logits].shape : ', output['text']['logits'].shape)
 
 
 #image_embeds, image_atts, attn = model.imege_embeds_test_forward(input_datas)
-attn = model.get_last_selfattention(input_datas)
+attn = model.get_attention(input_datas)
 
 attn = np.transpose(attn,(1,0,2,3,4))
 
