@@ -122,7 +122,7 @@ class Blip2T5_CUSTOM(Blip2Base):
         return image_embeds, image_atts, attn
     
 
-    def get_last_selfattention(self, samples):  # My_Function
+    def get_attention(self, samples):  # My_Function
         image = samples["image"]
 
         with self.maybe_autocast():
